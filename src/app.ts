@@ -1,14 +1,15 @@
 import * as express from 'express'
 import * as bodyParser from 'body-parser'
+import * as mongoose from 'mongoose'
+import Controller from './interfaces/controller.interface'
 
 class App {
     public app: express.Application
-    public port: number
 
-    constructor(controllers, port) {
+    constructor(controllers: Controller[]) {
         this.app = express()
-        this.port = port
 
+        this.connectDB()
         this.initializeMiddlewares()
         this.initializeControllers(controllers)
     }
@@ -23,9 +24,24 @@ class App {
         })
     }
 
+    private connectDB() {
+        mongoose.connect(process.env.MONGO_URI, {
+            useNewUrlParser: true,
+            useFindAndModify: false,
+            useCreateIndex: true,
+            useUnifiedTopology: true
+        })
+            .then(() => {
+                console.log("MongoDb Connection Successful")
+            })
+            .catch(err => {
+                console.error(err)
+            })
+    }
+
     public listen() {
-        this.app.listen(this.port, () => {
-            console.log(`App listening on the port ${this.port}`)
+        this.app.listen(process.env.PORT, () => {
+            console.log(`App listening on the port ${process.env.PORT}`)
         })
     }
 }
