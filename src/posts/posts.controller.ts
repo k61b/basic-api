@@ -2,6 +2,7 @@ import * as express from 'express'
 import Controller from '.././interfaces/controller.interface'
 import Post from './post.interface'
 import postModel from './posts.model'
+import PostNotFountException from '../exceptions/PostNotFoundException'
 
 class PostsController implements Controller {
     public path = '/posts'
@@ -25,10 +26,12 @@ class PostsController implements Controller {
             .then(posts => response.send(posts))
     }
 
-    getPostById = (request: express.Request, response: express.Response) => {
+    getPostById = (request: express.Request, response: express.Response, next: express.NextFunction) => {
         const id = request.params.id
         this.postModel.findById(id)
-            .then(post => response.send(post))
+            .then(post => {
+                post ? response.send(post) : next(new PostNotFountException(id))
+            })
     }
 
     createPost = (request: express.Request, response: express.Response) => {
@@ -38,22 +41,20 @@ class PostsController implements Controller {
             .then(savedPost => response.send(savedPost))
     }
 
-    updatePost = (request: express.Request, response: express.Response) => {
+    updatePost = (request: express.Request, response: express.Response, next: express.NextFunction) => {
         const id = request.params.id
         const postData: Post = request.body
         this.postModel.findByIdAndUpdate(id, postData, { new: true })
-            .then(post => response.send(post))
+            .then(post => {
+                post ? response.send(post) : next(new PostNotFountException(id))
+            })
     }
 
-    deletePost = (request: express.Request, response: express.Response) => {
+    deletePost = (request: express.Request, response: express.Response, next: express.NextFunction) => {
         const id = request.params.id
         this.postModel.findByIdAndDelete(id)
             .then((succesResponse) => {
-                if (succesResponse) {
-                    response.send(200)
-                } else {
-                    response.send(404)
-                }
+                succesResponse ? response.send(200) : next(new PostNotFountException(id))
             })
     }
 }

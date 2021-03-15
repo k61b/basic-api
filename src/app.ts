@@ -2,6 +2,7 @@ import * as express from 'express'
 import * as bodyParser from 'body-parser'
 import * as mongoose from 'mongoose'
 import Controller from './interfaces/controller.interface'
+import errorMiddleware from './middleware/error.middleware'
 
 class App {
     public app: express.Application
@@ -12,6 +13,7 @@ class App {
         this.connectDB()
         this.initializeMiddlewares()
         this.initializeControllers(controllers)
+        this.initializeErrorHandling()
     }
 
     private initializeMiddlewares() {
@@ -24,6 +26,10 @@ class App {
         })
     }
 
+    private initializeErrorHandling() {
+        this.app.use(errorMiddleware)
+    }
+
     private connectDB() {
         mongoose.connect(process.env.MONGO_URI, {
             useNewUrlParser: true,
@@ -32,7 +38,7 @@ class App {
             useUnifiedTopology: true
         })
             .then(() => {
-                console.log("MongoDb Connection Successful")
+                console.log("MongoDB Connection Successful")
             })
             .catch(err => {
                 console.error(err)
