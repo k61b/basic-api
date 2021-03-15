@@ -2,6 +2,7 @@
   "compilerOptions": {
     "module": "commonjs",
     "sourceMap": true,
+    "experimentalDecorators": true,
     "target": "es2017",
     "outDir": "./dist",
     "baseUrl": "./src"
