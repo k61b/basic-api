@@ -6,7 +6,7 @@ interface User {
     email: string
     password: string
     address?: {
-        street: string,
+        country: string,
         city: string,
     }
 }

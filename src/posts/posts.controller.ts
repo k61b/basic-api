@@ -5,6 +5,8 @@ import postModel from './posts.model'
 import PostNotFountException from '../exceptions/PostNotFoundException'
 import validationMiddleware from '../middleware/validation.middleware'
 import CreatePostDto from './post.dto'
+import authMiddleware from '../middleware/auth.middleware'
+import RequestWithUser from '../interfaces/requestWithUser.interface'
 
 class PostsController implements Controller {
     public path = '/posts'
@@ -18,46 +20,46 @@ class PostsController implements Controller {
     public initializeRoutes() {
         this.router.get(this.path, this.getAllPosts)
         this.router.get(`${this.path}/:id`, this.getPostById)
-        this.router.post(this.path, validationMiddleware(CreatePostDto), this.createPost)
-        this.router.patch(`${this.path}/:id`, validationMiddleware(CreatePostDto, true), this.updatePost)
-        this.router.delete(`${this.path}/:id`, this.deletePost)
+        this.router.all(`${this.path}/*`, authMiddleware)
+            .patch(`${this.path}/:id`, validationMiddleware(CreatePostDto, true), this.updatePost)
+            .delete(`${this.path}/:id`, this.deletePost)
+            .post(this.path, authMiddleware, validationMiddleware(CreatePostDto), this.createPost)
     }
 
-    getAllPosts = (request: express.Request, response: express.Response) => {
-        this.postModel.find()
-            .then(posts => response.send(posts))
+    getAllPosts = async (request: express.Request, response: express.Response) => {
+        const posts = await this.postModel.find()
+            .populate('author', '-password')
+        response.send(posts)
     }
 
-    getPostById = (request: express.Request, response: express.Response, next: express.NextFunction) => {
+    getPostById = async (request: express.Request, response: express.Response, next: express.NextFunction) => {
         const id = request.params.id
-        this.postModel.findById(id)
-            .then(post => {
-                post ? response.send(post) : next(new PostNotFountException(id))
-            })
+        const post = await this.postModel.findById(id)
+        post ? response.send(post) : next(new PostNotFountException(id))
     }
 
-    createPost = (request: express.Request, response: express.Response) => {
+    createPost = async (request: RequestWithUser, response: express.Response) => {
+        const postData: CreatePostDto = request.body
+        const createdPost = new this.postModel({
+            ...postData,
+            author: request.user._id,
+        })
+        const savedPost = await createdPost.save()
+        await savedPost.populate('author', '-password').execPopulate()
+        response.send(savedPost)
+    }
+
+    updatePost = async (request: express.Request, response: express.Response, next: express.NextFunction) => {
+        const id = request.params.id
         const postData: Post = request.body
-        const createdPost = new this.postModel(postData)
-        createdPost.save()
-            .then(savedPost => response.send(savedPost))
+        const post = this.postModel.findByIdAndUpdate(id, postData, { new: true })
+        post ? response.send(post) : next(new PostNotFountException(id))
     }
 
-    updatePost = (request: express.Request, response: express.Response, next: express.NextFunction) => {
+    deletePost = async (request: express.Request, response: express.Response, next: express.NextFunction) => {
         const id = request.params.id
-        const postData: Post = request.body
-        this.postModel.findByIdAndUpdate(id, postData, { new: true })
-            .then(post => {
-                post ? response.send(post) : next(new PostNotFountException(id))
-            })
-    }
-
-    deletePost = (request: express.Request, response: express.Response, next: express.NextFunction) => {
-        const id = request.params.id
-        this.postModel.findByIdAndDelete(id)
-            .then((succesResponse) => {
-                succesResponse ? response.send(200) : next(new PostNotFountException(id))
-            })
+        const successResponse = await this.postModel.findByIdAndDelete(id)
+        successResponse ? response.send(200) : next(new PostNotFountException(id))
     }
 }
 
