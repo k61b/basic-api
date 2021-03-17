@@ -8,6 +8,7 @@ interface User {
     address?: {
         country: string,
         city: string,
+        street: string
     }
 }
 
