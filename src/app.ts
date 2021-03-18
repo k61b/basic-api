@@ -17,6 +17,10 @@ class App {
         this.initializeErrorHandling()
     }
 
+    public getServer() {
+        return this.app
+    }
+
     private initializeMiddlewares() {
         this.app.use(bodyParser())
         this.app.use(cookieParser())
@@ -39,12 +43,6 @@ class App {
             useCreateIndex: true,
             useUnifiedTopology: true
         })
-            .then(() => {
-                console.log("MongoDB Connection Successful")
-            })
-            .catch(err => {
-                console.error(err)
-            })
     }
 
     public listen() {

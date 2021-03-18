@@ -2,7 +2,6 @@ import * as bcrypt from 'bcrypt'
 import * as express from 'express'
 import * as jwt from 'jsonwebtoken'
 import User from 'users/user.interface'
-import UserWithThatEmailAlreadyExistsException from '../exceptions/UserWithThatEmailAlreadyExistsException'
 import WrongCredentialsException from '../exceptions/WrongCredentialsException'
 import Controller from '../interfaces/controller.interface'
 import DataStoredInToken from '../interfaces/dataStoredInToken.interface'
@@ -11,10 +10,12 @@ import validationMiddleware from '../middleware/validation.middleware'
 import CreateUserDto from '../users/user.dto'
 import userModel from './../users/user.model'
 import LogInDto from './logIn.dto'
+import AuthenticationService from './authentication.service'
 
 class AuthenticationController implements Controller {
     public path = '/auth'
     public router = express.Router()
+    public authenticationService = new AuthenticationService()
     private user = userModel
 
     constructor() {
@@ -29,18 +30,15 @@ class AuthenticationController implements Controller {
 
     private registration = async (request: express.Request, response: express.Response, next: express.NextFunction) => {
         const userData: CreateUserDto = request.body
-        if (await this.user.findOne({ email: userData.email })) {
-            next(new UserWithThatEmailAlreadyExistsException(userData.email))
-        } else {
-            const hashedPassword = await bcrypt.hash(userData.password, 10)
-            const user = await this.user.create({
-                ...userData,
-                password: hashedPassword,
-            })
-            user.password = undefined
-            const tokenData = this.createToken(user)
-            response.setHeader('Set-Cookie', [this.createCookie(tokenData)])
+        try {
+            const {
+                cookie,
+                user
+            } = await this.authenticationService.register(userData)
+            response.setHeader('Set-Cookie', [cookie])
             response.send(user)
+        } catch (error) {
+            next(error)
         }
     }
 
